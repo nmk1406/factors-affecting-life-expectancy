@@ -1,0 +1,308 @@
+---
+title: '**Phân tích các yếu tố ảnh hưởng đến tuổi thọ**'
+output:
+  word_document: default
+  html_document:
+    df_print: paged
+  pdf_document: default
+---
+
+- Author: Nguyen Minh Khoa
+- Gmail: nmk14062001@gmail.com
+
+## **1. Tóm tắt**
+
+Có thể thấy rằng trong 15 năm qua, lĩnh vực y tế đã có sự phát triển vượt bậc, điều đó giúp cải thiện tỷ lệ tử vong ở người, đặc biệt là ở các nước đang phát triển. Vì thế tôi thực hiện nghiên cứu với các phương pháp thống kê cơ bản và machine learning với mục tiêu tìm ra được các yếu tố chính làm ảnh hưởng tới tuổi thọ trung bình.
+
+## **2. Giới thiệu**
+
+Với câu hỏi nghiên cứu chung là tìm ra các yếu tố ảnh hưởng tới tuổi thọ. Tôi sẽ sử dụng phương pháp thống kê suy diễn để thực hiện 2 câu hỏi nghiên cứu.
+
+1. Tuổi thọ trung bình giữa các nước phát triển và đang phát triển có thực sự khác biệt hay không?
+- **Output**: Tuổi thọ trung bình (Life.expectancy)
+- **Input**: Trạng thái của quốc gia (Status)
+2. Tác động của việc đi học đối với tuổi thọ trung bình là như thế nào?
+- **Output**: Tuổi thọ trung bình (Life.expectancy)
+- **Input**: Số năm đi học (Schooling)
+  
+Áp dụng thêm phương pháp machine learning để dự đoán tuổi thọ trung bình của dân số ở các quốc gia.
+
+- **Output**: Life.expectancy
+- **Input**: Adult.Mortality, infant.deaths, Alcohol, percentage.expenditure, Hepatitis.B, Measles, BMI, under.five.deaths, Polio, Total.expenditure, Diphtheria, HIV.AIDS, GDP, Population, thinness..1.19.years, thinness.5.9.years, Income.composition.of.resources, 
+Schooling
+- Các thuật toán được sử dụng: Linear regression, Ridge regression, Lasso regression.
+
+## **3. Dữ liệu**
+
+Dữ liệu được thu thập bởi WHO và trang web của liên hợp quốc. Gồm 2938 dòng và 22 cột.
+
+1. **Country**: quốc gia
+2. **Year**: năm
+3. **Status**: trạng thái đã phát triển hay đang phát triển
+4. **Life.expectancy**: tuổi thọ trung bình
+5. **Adult.Mortality**: số ca tử vong ở người trưởng thành (từ 15-60 tuổi) trên 1000 người
+6. **infant.deaths**: số ca tử vong ở trẻ em trên 1000 người
+7. **Alcohol**: mức tiêu thụ rượu tính theo bình quân đầu người (lit)
+8. **percentage.expenditure**: chi tiêu cho y tế tính theo phần trăm tổng sản phẩm quốc nội bình quân đầu người
+9. **Hepatitis.B**: tỷ lệ tiêm chủng viêm gan B ở trẻ 1 tuổi (%)
+10. **Measles**: số cả sởi ghi nhận
+11. **BMI**: chỉ số khối cơ thể
+12. **under.five.deaths**: sô ca trẻ dưới 5 tuổi tử vong trên 1000 người
+13. **Polio**: tỷ lệ tiêm chủng viêm bại liệt ở trẻ 1 tuổi (%)
+14. **Total.expenditure**: chi tiêu chung của chính phủ cho y tế tính theo tỷ lệ phần trăm trong tổng chi tiêu của chính phủ
+15. **Diphtheria**: tỷ lệ tiêm chủng viêm bạch hầu, ho gà, uống ván ở trẻ 1 tuổi (%)
+16. **HIV.AIDS**: số ca tử vong ở trẻ em (từ 0-4 tuổi) do HIV/AIDS trên 1000 người
+17. **GDP**: tổng sản phẩm quốc nội ($)
+18. **Population**: dân số của quốc gia
+19. **thinness..1.19.years**: tỷ lệ gầy ốm của thanh niên (từ 10-19 tuổi)
+20. **thinness.5.9.years**: tỷ lệ gầy ốm của thanh niên (từ 5-9 tuổi)
+21. **Income.composition.of.resources**: chỉ số phát triển con người dựa trên thành phần thu nhập của các nguồn lực (từ 0-1)
+22. **Schooling**: số năm đi học
+
+Thực hiện loại bỏ missing values.
+
+Encode biến phân loại.
+
+```{r, echo=FALSE}
+df <- read.csv(file = "C:/Users/nmk14/Downloads/R4DA/Life Expectancy Data.csv", header = T)
+attach(df)
+```
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+library(dplyr)
+library(tidyr)
+df <- drop_na(df)
+```
+
+## **4. Trực quan hóa dữ liệu và thống kê suy diễn**
+
+### Câu 1: Tuổi thọ trung bình giữa các nước phát triển và đang phát triển có thực sự khác biệt hay không?
+
+```{r, echo=FALSE}
+library(ggplot2)
+ggplot(df, aes(Status, Life.expectancy)) +
+  geom_boxplot(notch = T, aes(fill = Status)) +
+  theme_bw() + theme_classic() +
+  labs(x = "Status of country", y = "Life epectancy")
+```
+
+Nhìn vào biểu đồ ta có thể thấy:
+
+- Median của các nước phát triển trong khoảng 78 trong khi những nước đang phát triển chỉ ở mức 70.
+- Tuổi thọ trung bình của các nước phát triển chủ yếu trong khoảng 76-82 còn với những nước đang phát triển thì đa số trong khoảng 63-74.
+- Có thể thấy rằng sự khác biệt về tuổi thọ giữa 2 nhóm nước là khá rõ rệt.
+- Những chấm đen ở đuôi, ứng với những nước đang phát triển cho ta thấy đó có thể là giá trị outlier, những quốc gia này có mức tuổi thọ trung bình là khá thấp, rơi vào khoảng dưới 50 tuổi.
+
+Để kiểm chứng cho câu hỏi được đặt ra ban đầu thì tôi sử dụng thêm phương pháp t test.
+
+- H~0~: Không có sự khác biệt về tuổi thọ trung bình giữa các nước phát triển và đang phát triển.
+- H~a~: Có sự khác biệt về tuổi thọ trung bình giữa các nước phát triển và đang phát triển.
+
+```{r, echo=FALSE}
+t.test(Life.expectancy ~ Status)
+```
+
+### Kết luận
+- Chỉ số p rất nhỏ, từ đó có thể loại bỏ giả thuyết H~0~ và có thể kết luận rằng sự khác biệt về tuổi thọ trung bình giữa các nước phát triển và đang phát triển là do thực tế.
+- t = 47.868 cho ta thấy sự khác biệt về tuổi thọ trung bình giữa 2 nhóm nước phát triển và đang phát triển lớn gấp 47.868 lần so với độ lệch chuẩn của sự khác biệt này.
+- Mức ý nghĩa 95% có thể hiểu rằng nếu ta lặp lại nghiên cứu 100 lần thì sẽ có 95 nghiên cứu cho thấy sự khác biệt về tuổi thọ trung bình giữa 2 nhóm nước phát triển và đang phát triển sẽ trong khoảng 11.59 - 12.58.
+
+### Câu 2: Tác động của việc đi học đối với tuổi thọ trung bình là như thế nào?
+
+```{r, echo=FALSE, message=FALSE}
+ggplot(df, aes(Schooling, Life.expectancy, fill = Status)) +
+  geom_point(aes(col = Status)) +
+  geom_smooth(method = "lm") +
+  theme_bw() + theme_classic() +
+  labs(x = "Number of years of schooling", y = "Life expectancy")
+```
+
+Nhìn vào biểu đồ ta có thể thấy:
+
+- Các quốc gia phát triển thì có số năm đi học trong khoảng từ 12-20 năm, tương ứng với số năm đi học đó thì tuổi thọ của người dân ở các quốc gia này cũng khá cao, luôn nằm trong khoảng 70-90 tuổi.
+- Trong khi đó những quốc gia đang phát triển có số năm đi học thấp hơn, và trong khoảng từ 5-16 năm thì tuổi thọ trung bình của họ đa phần sẽ trải dài từ 50-80 tuổi.
+- Có một số khá ít quốc gia đang phát triển có tuổi thọ từ 80-90 tuổi, đây có thể là do những quốc gia này có tốc độ phát triển nhanh nên đời sống cũng tăng theo.
+- Từ biểu đồ ta có thể thấy việc đi học có tác động rất lớn đối với tuổi thọ trung bình của người dân.
+- 2 đường chéo thể hiện việc dự đoán tuổi thọ của dân số của các quốc gia.
+
+Để kiểm chứng cho câu hỏi được đặt ra ban đầu thì tôi sử dụng thêm phương pháp cor-test.
+
+- H~0~: Không có mối tương quan giữa việc đi học và tuổi thọ trung bình.
+- H~a~: Có mối tương quan giữa việc đi học và tuổi thọ trung bình.
+
+```{r, echo=FALSE}
+cor.test(Life.expectancy, Schooling)
+```
+
+### Kết luận
+- Chỉ số p rất nhỏ, từ đó có thể loại bỏ giả thuyết H~0~ và có thể kết luận rằng số năm đến trường ảnh hưởng tới tuổi thọ trung bình.
+- Hệ số tương quan bằng 0.75 cho thấy mối tương quan giữa số năm đến trường và tuổi thọ trung bình là khá cao.
+- Từ hệ số tương quan này có thể suy ra hệ số xác định là 0.75^2 = 0.56
+- Có thể hiểu rằng 56% sự khác biệt về tuổi thọ có thể giải thích bằng sự khác biệt về số năm đến trường.
+- Mức ý nghĩa 95% có thể hiểu rằng nếu ta lặp lại nghiên cứu 100 lần thì sẽ có 95 nghiên cứu cho ra hệ số tương quan trong khoảng 0.74 - 0.77.
+
+## **5. Mô hình hóa dữ liệu**
+
+Tôi sẽ sử dụng 3 mô hình Linear, Ridge và Lasso regression để thực hiện train model.
+
+![](C:\Users\nmk14\Desktop\image\linear.PNG)
+
+- Mô hình Linear regression chỉ tập trung vào việc thực hiện quá trình cực tiểu hóa lỗi trên tập huấn luyện, điều đó sẽ dễ dấn đến tình trạng overfitting.
+
+```{r, echo=FALSE, message=FALSE}
+# bỏ những biến không phải biến số
+library(dplyr)
+
+df$Status <- as.numeric(as.factor(df$Status))
+
+df %>%
+  select(-c(Country, Year)) -> df
+
+```
+
+- Chia dữ liệu thành 2 phần: tập train chiếm 80%, tập test chiếm 20%.
+- Áp dụng phương pháp cross validation lên tập train, chia tập train thành 10 phần, 9 phần dùng để train và 1 phần dùng validation.
+- Sử dụng độ đo chính để so sánh các mô hình là RMSE và R^2^.
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+# B1: tách dữ liệu
+library(caret)
+set.seed(1)
+index <- createDataPartition(df$Life.expectancy, p = 0.8, list = F)
+train <- df[index, ]
+test <- df[-index, ]
+```
+
+```{r, echo=FALSE, message=FALSE}
+# điều chỉnh siêu tham số và mô hình theo phương pháp Cross Validation
+ctrl <- trainControl(method = "cv", number = 10)
+```
+
+```{r, echo=FALSE, message=FALSE}
+# B2: train theo mô hình OLS 
+set.seed(1)
+linear <- train(Life.expectancy ~ .,
+                data = train,
+                method = "lm",
+                trControl = ctrl)
+linear
+```
+
+- Sau khi train ta có thể thấy giá trị RMSE là khoảng 3.576 và R^2^ là khoảng 0.836.
+
+- Mô hình Ridge và Lasso sẽ thêm phần chỉnh hóa vào sau mô hình Linear thông thường
+
+![](C:\Users\nmk14\Desktop\image\ridge.PNG)
+
+- Đối với mô hình Ridge regression thì mô hình này sẽ tránh được trường hợp ma trận suy biến, tăng được khả năng tổng quát hóa của mô hình nhưng lỗi trong tập huấn luyện có thể cao hơn phương pháp Linear thông thường.
+
+```{r, echo=FALSE, message=FALSE}
+# B2: train theo mô hình ridge
+set.seed(1)
+ridge <- train(Life.expectancy ~ .,
+               data = train,
+               method = "glmnet",
+               trControl = ctrl,
+               tuneGrid = expand.grid(alpha = 0, lambda = seq(0.01, 1, length = 100)))
+ridge
+```
+
+- alpha = 0 thể hiện rằng mô hình đang được train theo phương pháp Ridge regression, lambda tối ưu nhất được chọn là 0.63 ứng với giá trị RMSE là khoảng 3.668 và R^2^ là khoảng 0.827.
+
+```{r, echo=FALSE, message=FALSE}
+coef(ridge$finalModel, ridge$bestTune$lambda)
+```
+
+- Đây là bảng hệ số của mô hình Ridge regression.
+
+![](C:\Users\nmk14\Desktop\image\lasso.PNG)
+
+- Đối với mô hình Lasso regression, khi tăng siêu tham số lambda lên cao thì nó sẽ làm cho 1 số hệ số của mô hình dần về 0, mô hình này khá phù hợp trong việc chọn tham số cho mô hình.
+
+```{r, echo=FALSE, message=FALSE}
+# B2: train theo mô hình lasso
+set.seed(1)
+lasso <- train(Life.expectancy ~ .,
+               data = train,
+               method = "glmnet",
+               trControl = ctrl,
+               tuneGrid = expand.grid(alpha = 1, lambda = seq(0.0001, 0.01, length = 100)))
+lasso
+```
+
+- alpha = 1 thể hiện rằng mô hình đang được train theo phương pháp Lasso regression, lambda tối ưu nhất được chọn là 0.0017 ứng với giá trị RMSE là khoảng 3.577 và R^2^ là khoảng 0.836.
+
+```{r, echo=FALSE, message=FALSE}
+coef(lasso$finalModel, lasso$bestTune$lambda)
+```
+
+- Đây là bảng hệ số của mô hình Lasso regression.
+
+## **6. Thực nghiệm, kết quả, và thảo luận**
+
+- Khi điều chỉnh tham số lambda trong mô hình Ridge và Lasso ta sẽ đánh đổi giữa việc. Nếu giảm lambda dần về 0 sẽ trở thành Linear thông thường, nó sẽ dễ dẫn đến overfitting, nếu tăng lambda lên thì mô hình sẽ tăng được khả năng tổng quát hóa nhưng đồng nghĩa với việc lỗi trên tập huấn luyện sẽ cao hơn so với việc dùng mô hình Linear. Nếu lambda đạt đến vô cùng thì mô hình sẽ bị underfitting.
+
+- Sử dụng RMSE và R^2^ để so sánh giữa các mô hình.
+
+```{r, echo=FALSE, message=FALSE}
+# so sánh mô hình
+models <- list(linear = linear, ridge = ridge, lasso = lasso)
+resamples(models) %>% summary( metric = "RMSE")
+resamples(models) %>% summary( metric = "Rsquared")
+```
+
+Sau khi so sánh ta có thể thấy:
+
+- Mô hình Linear sẽ cho ra giá trị RMSE tối ưu nhất, sau đó đến mô hình Lasso.
+- Mô hình Lasso sẽ cho ra kết quả R2 cao nhất.
+
+Chọn mô hình Lasso làm mô hình cuối để train lại trên toàn bộ tập train với siêu tham số lambda tối ưu nhất là 0.0017.
+
+```{r, echo=FALSE, message=FALSE}
+# B3: train lại trên toàn bộ tập train với mô hình và siêu tham số tốt nhất
+set.seed(1)
+final_model <- train(Life.expectancy ~ .,
+               data = train,
+               method = "glmnet",
+               tuneGrid = expand.grid(alpha = 1, lambda = lasso$bestTune$lambda))
+
+final_model
+```
+
+- Sau khi train thì mô hình cho ra kết quả RMSE là 3.589 và R^2^ là 0.835 là khá tốt
+
+Dự đoán trên tập test
+
+- Tạo ra biến predictions chưa giá trị dự đoán
+
+```{r, echo=FALSE, message=FALSE}
+# B4: test trên tập test
+test$predictions <-  predict(final_model, test)
+test %>%
+  select(Life.expectancy, predictions) %>%
+  slice(1:10)
+```
+
+- Ta so sánh giá trị dự đoán và giá trị thực tế có thể thấy sự chênh lệch không quá lớn
+
+Tính lại giá trị RMSE và R^2^ để có thể đánh giá mô hình có bị overfiting hay underfitting không
+
+```{r, echo=FALSE, message=FALSE}
+data.frame(
+  RMSE = RMSE(test$predictions, test$Life.expectancy),
+  Rsquare = R2(test$predictions, test$Life.expectancy)
+)
+```
+
+```{r, echo=FALSE, message=FALSE}
+ggplot(test, aes(Life.expectancy, predictions)) +
+  geom_point() +
+  geom_smooth(method = "lm")
+
+```
+
+- Kết quả cho thấy mô hình dự đoán khá tốt, không lệch nhiều so với dự đoán trên tập train
+
+## **7. Kết luận**
+
+- Sử dụng độ đo là R^2^ và RMSE. Nên khi so sánh 3 mô hình thì mô hình Lasso cho ra kết quả tốt nhất trên tập train. Mặc dù R^2^ trên mô hình Linear cho kết quả tốt hơn nhưng khả năng tổng quát hóa của mô hình này không tốt bằng mô hình Lasso. Vì thế tôi quyết định train lại mô hình Lasso trên toàn bộ tập train sau đó thực hiện dự đoán trên tập test. Kết quả R^2^ dự đoán được chưa thực sự cao, nếu có điều kiện thì tôi sẽ tiếp tục nghiên cứu 1 số mô hình khác để có thể mang lại kết quả cao hơn.
